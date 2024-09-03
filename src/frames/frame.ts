@@ -24,7 +24,7 @@ const BYTES_4_LENGTH = 4 * BYTE_CHARS
 const BYTES_13_LENGTH = 13 * BYTE_CHARS
 const BYTES_16_LENGTH = 16 * BYTE_CHARS
 
-export const extractFrames = (data: string): FramesWithCompressedData => {
+export const extractFrames_v0 = (data: string): FramesWithCompressedData => {
   const frames: FramesWithCompressedData = []
   let offset = 0
   while (offset < data.length) {
@@ -34,23 +34,33 @@ export const extractFrames = (data: string): FramesWithCompressedData => {
     }
 
     const channelId = data.slice(offset, offset + BYTES_16_LENGTH)
+    console.log('channel:', channelId)
+
     offset += BYTES_16_LENGTH
 
     const frameNumber = Number(`0x${data.slice(offset, offset + BYTES_2_LENGTH)}`)
+    console.log('frame num:', frameNumber)
+
     offset += BYTES_2_LENGTH
 
     const frameDataLengthInBytes = Number(`0x${data.slice(offset, offset + BYTES_4_LENGTH)}`)
+    console.log('frame data length:', frameDataLengthInBytes)
+
     offset += BYTES_4_LENGTH
     const frameDataLength = frameDataLengthInBytes * BYTE_CHARS
 
     if (frameDataLengthInBytes > MAX_FRAME_LENGTH || offset + frameDataLength > data.length) {
-      throw new Error('Frame data length is too large or exceeds buffer length')
+      throw new Error(
+        `Frame data length is too large or exceeds buffer length: ${frameDataLengthInBytes}, ${data.length}, ${offset + frameDataLength}`
+      )
     }
 
     const frameData = `${data.slice(offset, offset + frameDataLength)}`
     offset += frameDataLength
 
     const isLast = Number(`0x${data.slice(offset, offset + BYTES_1_LENGTH)}`) !== 0
+    console.log('is_last:', Number(`0x${data.slice(offset, offset + BYTES_1_LENGTH)}`))
+
     offset += BYTES_1_LENGTH
 
     frames.push({ channelId, frameNumber, data: frameData, isLast })
@@ -63,12 +73,23 @@ export const extractFrames = (data: string): FramesWithCompressedData => {
   return frames
 }
 
-export const addBatchesToFrame = async (frame: FrameWithCompressedData): Promise<Frame> => {
+export const addBatchesToFrame_v0 = async (frame: FrameWithCompressedData): Promise<Frame> => {
   const batches = await parseBatchesData(frame.data)
   return {
     channelId: frame.channelId,
     frameNumber: frame.frameNumber,
     isLast: frame.isLast,
+    batches
+  }
+}
+
+export const addBatchesToFrame_v1 = async (channel: string): Promise<Frame> => {
+  const batches = await parseBatchesData(channel)
+  return {
+    // FIXME
+    channelId: 'asdfg',
+    frameNumber: 0,
+    isLast: true,
     batches
   }
 }

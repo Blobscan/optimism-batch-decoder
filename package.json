@@ -57,6 +57,7 @@
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "ethereumjs-util": "^7.1.5",
+    "ethers": "^6.13.2",
     "rlp": "^3.0.0",
     "tslib": "^2.6.2",
     "viem": "^2.1.1"
