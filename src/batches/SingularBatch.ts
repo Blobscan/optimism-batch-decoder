@@ -5,6 +5,10 @@ import { OpStackTransactionSerialized } from 'viem/chains'
 import { parseTransaction } from 'viem/op-stack'
 import type { InnerBatch } from './batch'
 
+// https://github.com/ethereum-optimism/optimism/blob/375b9766bdf4678253932beae8234cc52f1f46ee/op-node/rollup/derive/singular_batch.go#L22
+// https://specs.optimism.io/protocol/derivation.html#batch-submission-wire-format
+// Singular batches (pre-Delta hardfork)
+// https://specs.optimism.io/protocol/derivation.html#batch-format
 export class SingularBatch {
   static decode(data: Uint8Array | NestedUint8Array): InnerBatch {
     const decoded = rlp.decode(data)

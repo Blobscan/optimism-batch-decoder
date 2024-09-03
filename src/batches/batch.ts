@@ -1,8 +1,8 @@
 import rlp, { NestedUint8Array } from 'rlp'
-import zlib from 'zlib'
 import stream from 'stream'
-import { SingularBatch } from './SingularBatch'
+import zlib from 'zlib'
 import { RawSpanBatch } from './RawSpanBatch'
+import { SingularBatch } from './SingularBatch'
 
 type Transaction = {
   type?: string
@@ -53,11 +53,15 @@ export const parseBatchesData = async (compressedBatches: string): Promise<Batch
   return decodedBatches
 }
 
-const decompressBatches = async (compressedBatches: string): Promise<Buffer> => {
+export const decompressBatches = async (compressedBatches: string): Promise<Buffer> => {
   const inputBuffer = Buffer.from(compressedBatches, 'hex')
+
   try {
     // Decompress the input buffer
-    const decompress = zlib.createInflate({ maxOutputLength: MAX_BYTES_PER_CHANNEL })
+    const decompress = zlib.createInflate({
+      maxOutputLength: MAX_BYTES_PER_CHANNEL,
+      finishFlush: zlib.constants.Z_SYNC_FLUSH // required when decompressing span batches, otherwise "Error: unexpected end of file"
+    })
     const decompressStream = stream.Readable.from(inputBuffer)
 
     const chunks: Buffer[] = []

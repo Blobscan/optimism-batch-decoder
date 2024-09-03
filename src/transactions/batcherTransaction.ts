@@ -1,4 +1,4 @@
-import { Frames, extractFrames, addBatchesToFrame } from '../frames/frame'
+import { Frames, addBatchesToFrame, extractFrames } from '../frames/frame'
 
 export type BatcherTransaction = {
   version: number
@@ -13,6 +13,9 @@ export const extractBatcherTransaction = async (calldata: string): Promise<Batch
   }
 
   const version = Number(calldata.slice(0, 4))
+
+  // TODO: Add support for batcher transaction format v1
+  // https://specs.optimism.io/protocol/derivation.html#batcher-transaction-format
   if (version !== DERIVATION_VERSION_0) {
     throw new Error(`invalid derivation format byte: got ${version}`)
   }

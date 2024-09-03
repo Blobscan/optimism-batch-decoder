@@ -34,12 +34,18 @@ export const extractFrames = (data: string): FramesWithCompressedData => {
     }
 
     const channelId = data.slice(offset, offset + BYTES_16_LENGTH)
+    console.log('channel:', channelId)
+
     offset += BYTES_16_LENGTH
 
     const frameNumber = Number(`0x${data.slice(offset, offset + BYTES_2_LENGTH)}`)
+    console.log('frame num:', frameNumber)
+
     offset += BYTES_2_LENGTH
 
     const frameDataLengthInBytes = Number(`0x${data.slice(offset, offset + BYTES_4_LENGTH)}`)
+    console.log('frame data length:', frameDataLengthInBytes)
+
     offset += BYTES_4_LENGTH
     const frameDataLength = frameDataLengthInBytes * BYTE_CHARS
 
@@ -51,6 +57,8 @@ export const extractFrames = (data: string): FramesWithCompressedData => {
     offset += frameDataLength
 
     const isLast = Number(`0x${data.slice(offset, offset + BYTES_1_LENGTH)}`) !== 0
+    console.log('is_last:', Number(`0x${data.slice(offset, offset + BYTES_1_LENGTH)}`))
+
     offset += BYTES_1_LENGTH
 
     frames.push({ channelId, frameNumber, data: frameData, isLast })
