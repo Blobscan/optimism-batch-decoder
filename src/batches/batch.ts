@@ -1,4 +1,3 @@
-import fs from 'fs'
 import rlp, { NestedUint8Array } from 'rlp'
 import stream from 'stream'
 import zlib from 'zlib'
@@ -43,8 +42,7 @@ enum BatchType {
 const MAX_BYTES_PER_CHANNEL = 10_000_000
 
 export const parseBatchesData = async (compressedBatches: string): Promise<Batches> => {
-  console.log('parsing')
-  const decompressed = await decompressBatches_v0(compressedBatches)
+  const decompressed = await decompressBatches(compressedBatches)
   const decodedBatches: Batches = []
   let dataToDecode: Uint8Array = decompressed
   while (dataToDecode?.length) {
@@ -55,24 +53,15 @@ export const parseBatchesData = async (compressedBatches: string): Promise<Batch
   return decodedBatches
 }
 
-export const decompressBatches_v0 = async (compressedBatches: string): Promise<Buffer> => {
+export const decompressBatches = async (compressedBatches: string): Promise<Buffer> => {
   const inputBuffer = Buffer.from(compressedBatches, 'hex')
-  console.log('decompressing', inputBuffer.length, 'bytes')
-
-  fs.writeFileSync('blob1_ts.test', inputBuffer)
-  console.log('written blob1_ts.test')
-
-  //console.log(inputBuffer)
-  console.log(compressedBatches.slice(0, 100))
-  console.log(inputBuffer.toString('hex').slice(0, 100))
 
   try {
     // Decompress the input buffer
     const decompress = zlib.createInflate({
       maxOutputLength: MAX_BYTES_PER_CHANNEL,
-      finishFlush: zlib.constants.Z_SYNC_FLUSH
+      finishFlush: zlib.constants.Z_SYNC_FLUSH // required when decompressing span batches, otherwise "Error: unexpected end of file"
     })
-    //const decompress = zlib.createInflate()
     const decompressStream = stream.Readable.from(inputBuffer)
 
     const chunks: Buffer[] = []
@@ -86,15 +75,13 @@ export const decompressBatches_v0 = async (compressedBatches: string): Promise<B
   }
 }
 
-export const decodeBatch = (decodedBatch: Uint8Array | NestedUint8Array): Batch => {
+const decodeBatch = (decodedBatch: Uint8Array | NestedUint8Array): Batch => {
   if (decodedBatch.length < 1) throw new Error('Batch too short')
   // first byte is the batch type
   switch (decodedBatch[0]) {
     case BatchType.SingularBatch:
       return { inner: SingularBatch.decode(decodedBatch.slice(1)) }
     case BatchType.SpanBatch:
-      console.error('SpanBatch is not implemented')
-      //return { inner: decodedBatch }
       return { inner: RawSpanBatch.decode(decodedBatch.slice(1)) }
     default:
       throw new Error(`Unrecognized batch type: ${decodedBatch[0]}`)

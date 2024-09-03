@@ -1,10 +1,7 @@
 import fs from 'fs'
 import rlp from 'rlp'
-import { Readable } from 'stream'
-import zlib from 'zlib'
-import { decompressBatches_v0 } from './batches/batch'
-import type { Frames, FramesWithCompressedData } from './frames/frame'
-//import { extractFrames_v0 } from './frames/frame'
+import { decompressBatches } from './batches/batch'
+
 /**
  * Read the binary file and split it into chunks of the specified size.
  * @param buffer - The binary data from the file.
@@ -33,8 +30,8 @@ function bytesToNumber(bytes: Uint8Array): number {
  * @param datas - Array of Uint8Array data chunks to process.
  * @returns An array of frames with compressed data.
  */
-function processChannelData(datas: Uint8Array[]): FramesWithCompressedData {
-  const frames: FramesWithCompressedData = []
+function processChannelData(datas: Uint8Array[]): string {
+  const frames: string[] = []
 
   for (let data of datas) {
     if (data[0] !== 0) throw new Error('Assertion failed: data[0] must be 0 (derivation version)')
@@ -66,58 +63,18 @@ function processChannelData(datas: Uint8Array[]): FramesWithCompressedData {
         .map((byte) => byte.toString(16).padStart(2, '0'))
         .join('')
 
-      frames.push({
-        channelId,
-        frameNumber: frameNum,
-        data: frameData,
-        isLast
-      })
+      frames.push(frameData)
 
       data = data.slice(end) // Move to the next chunk of data
     }
   }
 
-  return frames
-}
+  const channel = Buffer.from(frames.join(''), 'hex')
+  console.log('full channel', channel.length, 'bytes')
+  //console.log(channel.slice(0, 100).toString())
+  console.log(channel.toString('hex').slice(0, 100))
 
-/**
- * Function to incrementally decompress a zlib-compressed data stream.
- * @param inputBuffer - The input buffer containing zlib-compressed data.
- * @returns A promise that resolves with the decompressed data.
- */
-function decompressIncrementally(inputBuffer: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const inflate = zlib.createInflate({ finishFlush: zlib.constants.Z_SYNC_FLUSH })
-    // zlib.createInflate complains like "Error: unexpected end of file"
-    // zlib.createInflateRaw() complains like "Error: invalid stored block lengths"
-    const chunks: Buffer[] = []
-
-    // Create a readable stream from the input buffer
-    const inputStream = new Readable({
-      read() {
-        this.push(inputBuffer)
-        this.push(null) // Signal end of input
-      }
-    })
-
-    // Pipe the input stream into the inflate stream
-    inputStream.pipe(inflate)
-
-    // Collect the decompressed chunks
-    inflate.on('data', (chunk) => {
-      chunks.push(chunk)
-    })
-
-    // Resolve the promise once decompression is complete
-    inflate.on('end', () => {
-      resolve(Buffer.concat(chunks))
-    })
-
-    // Handle errors during decompression
-    inflate.on('error', (err) => {
-      reject(err)
-    })
-  })
+  return frames.join('')
 }
 
 /**
@@ -238,55 +195,13 @@ async function processFile(filename: string): Promise<void> {
     datas.push(blobData.slice(4, declaredLength + 4))
   }
 
-  //const rawFrames = extractFrames_v0(calldata.slice(4))
-  //const rawFrames2 = extractFrames_v0(datas.toString())
-  const frames: Frames = []
-  const channel_parts: string[] = []
-  //const rawFrames = processChannelData(datas.slice(4))
-  const rawFrames = processChannelData(datas)
-  // console.log(rawFrames)
+  const fullChannel = processChannelData(datas)
 
-  for (const rawFrame of rawFrames) {
-    console.log('adding frame')
-    console.log(rawFrame.data.slice(0, 100))
-    const buffer = Buffer.from(rawFrame.data, 'hex')
-    console.log(buffer.slice(0, 100))
-
-    channel_parts.push(rawFrame.data)
-  }
-  const channel = Buffer.from(channel_parts.join(''), 'hex')
-
-  console.log('full channel', channel.length, 'bytes')
-  //console.log(channel.slice(0, 100).toString())
-  console.log(channel.toString('hex').slice(0, 100))
-
-  /*
-  decompressIncrementally(channel)
-    .then((decompressedData) => {
-      console.log('Decompressed data:', decompressedData.toString())
-    })
-    .catch((err) => {
-      console.error('Error decompressing data:', err)
-    })
-
-  decompressBatches_v0(channel_parts.join(''))
-    .then((result) => {
-      console.log(result) // Output the result decompressed
-      console.log('result of', result.length, 'bytes:', result.slice(0, 100))
-    })
-    .catch((error) => {
-      console.error('An error occurred:', error)
-    })
-  */
-
-  const fullChannel = channel_parts.join('')
-
-  const decompressed = await decompressBatches_v0(fullChannel)
+  const decompressed = await decompressBatches(fullChannel)
   const dataToDecode: Uint8Array = decompressed
   const { data: decoded, remainder } = rlp.decode(dataToDecode, true)
-  console.log('DECODED:', typeof decoded)
-  console.log(decoded)
 
+  console.log('result of', decoded.length, 'bytes:', decoded.slice(0, 100), '\n')
   if (decoded[0] !== 1) {
     throw new Error('decoded value is not a span batch')
   }
@@ -294,10 +209,6 @@ async function processFile(filename: string): Promise<void> {
   if (!(decoded instanceof Uint8Array)) {
     return
   }
-
-  //console.log('timestamp since L2 genesis:', readVarint(decoded.slice(1))) // Decode the varint
-
-  //console.log('result of', result.length, 'bytes:', result.slice(0, 100))
 
   let currentOffset = 1
 
@@ -416,6 +327,5 @@ async function processFile(filename: string): Promise<void> {
   */
 }
 
-// Example usage
-const filename = 'opstack_blobs_19538908.bin' // Replace with your binary file
+const filename = 'opstack_blobs_19538908.bin'
 processFile(filename)

@@ -23,19 +23,9 @@ type spanBatchPayload struct {
 export class RawSpanBatch {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   static decode(data: Uint8Array | NestedUint8Array): InnerBatch {
-    console.log('data0')
-    // console.log(data[0])
     // TODO: implement: prefix ++ payload
-    // https://github.com/ethereum-optimism/optimism/blob/375b9766bdf4678253932beae8234cc52f1f46ee/op-node/rollup/derive/span_batch.go#L49
     // const decoded = rlp.decode(data)
-    // return { data } as InnerBatch
-
-    return {
-      parentHash: data.toString(),
-      epochNum: 0,
-      epochHash: '0x',
-      timestamp: 3,
-      transactions: []
-    }
+    // https://github.com/ethereum-optimism/optimism/blob/375b9766bdf4678253932beae8234cc52f1f46ee/op-node/rollup/derive/span_batch.go#L49
+    return {} as InnerBatch
   }
 }
